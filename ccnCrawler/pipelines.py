@@ -18,37 +18,59 @@ import json
 #        return item
 
 class JsonPipeline(object):
-    
+
     def __init__(self):
-        #move (old)new.json to history
-        self.historyFile = open("history.json", 'rt', encoding='UTF-8')
-        self.newFile = open("new.json","rt", encoding='UTF-8')
+        #self.list = ['sw','ict','cse']
+        self.list = ['sw']
+        self.historyFiles = {}
+        self.articles = {}
+        self.exporters = {}
+        self.newFiles = {}
+
+        for element in self.list:          
+            #move (old)new.json to history
+            self.moveToHistory(element)
+            #open history files to deal with json data
+            self.historyFiles[element] = open("history_"+element+".json", 'rt', encoding='UTF-8')      
+            self.articles[element] = json.loads(self.historyFiles[element].read())
+            #open new files to write json data
+            self.newFiles[element] = open("new_"+element+".json", 'wb')
+            self.exporters[element] = JsonItemExporter(self.newFiles[element], encoding='utf-8', ensure_ascii=False, indent = 4)
+            self.exporters[element].start_exporting()
+ 
+    def close_spider(self, spider):
+        #new.json으로 합치고
+        #파일 다 닫기
+        for element in self.list:
+            self.exporters[element].finish_exporting()
+            self.historyFiles[element].close()
+            self.newFiles[element].close()
+
+ 
+    def process_item(self, item, spider):
+        for article in self.articles[item['src']]:
+            if (item['item']["title"] == article["title"]):
+                return
+        self.exporters[item['src']].export_item(item['item'])
+        #self.exporter.export_item(item)
+
+    def moveToHistory(self,element):
+        historyFile = open("history_"+element+".json", 'rt', encoding='UTF-8')
+        newFile = open("new_"+element+".json","rt", encoding='UTF-8')
         try:
-            self.old = json.loads(self.historyFile.read())
+            self.old = json.loads(historyFile.read())
         except:
             self.old = json.loads("[]")
         try:
-            self.new = json.loads(self.newFile.read())
+            self.new = json.loads(newFile.read())
         except:
             self.new  =json.loads("[]")
-        self.historyFile.close()
-        self.newFile.close()
+        historyFile.close()
+        newFile.close()
         
-        with open("history.json","wt",encoding='UTF-8') as outfile:
+        with open("history_"+element+".json","wt",encoding='UTF-8') as outfile:
             json.dump(self.old+self.new, outfile, indent=4,ensure_ascii = False)
-        
-        self.historyFile = open("history.json", 'rt', encoding='UTF-8')
-        self.articles = json.loads(self.historyFile.read())
-        self.newFile = open("new.json", 'wb')
-        self.exporter = JsonItemExporter(self.newFile, encoding='utf-8', ensure_ascii=False, indent = 4)
-        self.exporter.start_exporting()
- 
-    def close_spider(self, spider):
-        self.exporter.finish_exporting()
-        self.newFile.close()
- 
-    def process_item(self, item, spider):
-        for article in self.articles:
-            if (item["title"] == article["title"]):
-                return
-        self.exporter.export_item(item)
+
+    def compareAndWrite(self,historyFileName,newFileName):
+        return
+    

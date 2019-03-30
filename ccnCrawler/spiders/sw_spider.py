@@ -28,7 +28,7 @@ class SwSpider(scrapy.Spider):
             except:
                 item['title'] = response.xpath('//*[@id="boardForm"]/div[2]/ul/li['+ str(i) + ']/div/p[1]/a/text()').extract()[0].strip()
             
-            yield item
+            yield {'src':'sw','item':item}
 
         
         
