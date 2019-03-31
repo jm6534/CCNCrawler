@@ -20,8 +20,7 @@ import json
 class JsonPipeline(object):
 
     def __init__(self):
-        #self.list = ['sw','ict','cse']
-        self.list = ['sw']
+        self.list = ['sw','cse','ict']
         self.historyFiles = {}
         self.articles = {}
         self.exporters = {}
@@ -39,20 +38,17 @@ class JsonPipeline(object):
             self.exporters[element].start_exporting()
  
     def close_spider(self, spider):
-        #new.json으로 합치고
-        #파일 다 닫기
+        #close all 'new' files
         for element in self.list:
             self.exporters[element].finish_exporting()
             self.historyFiles[element].close()
             self.newFiles[element].close()
+        #combine all new json file to new.json
+        self.combineNewJson()
 
  
     def process_item(self, item, spider):
-        for article in self.articles[item['src']]:
-            if (item['item']["title"] == article["title"]):
-                return
-        self.exporters[item['src']].export_item(item['item'])
-        #self.exporter.export_item(item)
+        self.compareAndWrite(item)
 
     def moveToHistory(self,element):
         historyFile = open("history_"+element+".json", 'rt', encoding='UTF-8')
@@ -71,6 +67,22 @@ class JsonPipeline(object):
         with open("history_"+element+".json","wt",encoding='UTF-8') as outfile:
             json.dump(self.old+self.new, outfile, indent=4,ensure_ascii = False)
 
-    def compareAndWrite(self,historyFileName,newFileName):
+    def compareAndWrite(self,item):
+        for article in self.articles[item['src']]:
+            if (item['item']["title"] == article["title"]):
+                return
+        self.exporters[item['src']].export_item(item['item'])
         return
-    
+
+    def combineNewJson(self):
+        newData = {}
+        newData1 = []
+        for element in self.list:
+            jsonFile = open('new_'+element+'.json','rt',encoding='UTF-8')
+            newData[element] = json.loads(jsonFile.read())
+            newData1 += newData[element]
+            jsonFile.close()
+        
+
+        with open('new.json','wt',encoding='UTF-8') as outfile:
+            json.dump(newData1, outfile, indent=4,ensure_ascii = False)
