@@ -1,0 +1,2 @@
+# ignore generated crawling data files.
+*.json
